@@ -1136,7 +1136,8 @@ void drm_mode_prune_invalid(struct drm_device *dev,
 			    struct list_head *mode_list, bool verbose)
 {
 	struct drm_display_mode *mode, *t;
-
+	// allow all modes even if invalid.
+	return;
 	list_for_each_entry_safe(mode, t, mode_list, head) {
 		if (mode->status != MODE_OK) {
 			list_del(&mode->head);
