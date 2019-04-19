@@ -756,10 +756,8 @@ static irqreturn_t nvme_irq_check(int irq, void *data)
 	return IRQ_NONE;
 }
 
-static int nvme_poll(struct blk_mq_hw_ctx *hctx, unsigned int tag)
+static int __nvme_poll(struct nvme_queue *nvmeq, unsigned int tag)
 {
-	struct nvme_queue *nvmeq = hctx->driver_data;
-
 	if (nvme_cqe_valid(nvmeq, nvmeq->cq_head, nvmeq->cq_phase)) {
 		spin_lock_irq(&nvmeq->q_lock);
 		__nvme_process_cq(nvmeq, &tag);
@@ -770,6 +768,13 @@ static int nvme_poll(struct blk_mq_hw_ctx *hctx, unsigned int tag)
 	}
 
 	return 0;
+}
+
+static int nvme_poll(struct blk_mq_hw_ctx *hctx, unsigned int tag)
+{
+	struct nvme_queue *nvmeq = hctx->driver_data;
+
+	return __nvme_poll(nvmeq, tag);
 }
 
 static void nvme_pci_submit_async_event(struct nvme_ctrl *ctrl, int aer_idx)
@@ -870,6 +875,16 @@ static enum blk_eh_timer_return nvme_timeout(struct request *req, bool reserved)
 	struct nvme_command cmd;
 
 	/*
+	 * Did we miss an interrupt?
+	 */
+	if (__nvme_poll(nvmeq, req->tag)) {
+		dev_warn(dev->ctrl.device,
+			 "I/O %d QID %d timeout, completion polled\n",
+			 req->tag, nvmeq->qid);
+		return BLK_EH_HANDLED;
+	}
+	/*
+	
 	 * Shutdown immediately if controller times out while starting. The
 	 * reset work will see the pci device disabled when it gets the forced
 	 * cancellation error. All outstanding requests are completed on
