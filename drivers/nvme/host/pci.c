@@ -879,7 +879,7 @@ static enum blk_eh_timer_return nvme_timeout(struct request *req, bool reserved)
 	struct nvme_dev *dev = nvmeq->dev;
 	struct request *abort_req;
 	struct nvme_command cmd;
-
+	/*
 	 * Did we miss an interrupt?
 	 */
 	if (__nvme_poll(nvmeq, req->tag)) {
