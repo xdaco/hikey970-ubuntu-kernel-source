@@ -777,6 +777,12 @@ static int nvme_poll(struct blk_mq_hw_ctx *hctx, unsigned int tag)
 	return __nvme_poll(nvmeq, tag);
 }
 
+
+static int __nvme_poll(struct nvme_queue *nvmeq, unsigned int tag)
+{
+	return __nvme_poll(nvmeq, tag);
+}
+
 static void nvme_pci_submit_async_event(struct nvme_ctrl *ctrl, int aer_idx)
 {
 	struct nvme_dev *dev = to_nvme_dev(ctrl);
@@ -874,7 +880,6 @@ static enum blk_eh_timer_return nvme_timeout(struct request *req, bool reserved)
 	struct request *abort_req;
 	struct nvme_command cmd;
 
-	/*
 	 * Did we miss an interrupt?
 	 */
 	if (__nvme_poll(nvmeq, req->tag)) {
@@ -883,6 +888,7 @@ static enum blk_eh_timer_return nvme_timeout(struct request *req, bool reserved)
 			 req->tag, nvmeq->qid);
 		return BLK_EH_HANDLED;
 	}
+
 	/*
 	
 	 * Shutdown immediately if controller times out while starting. The
