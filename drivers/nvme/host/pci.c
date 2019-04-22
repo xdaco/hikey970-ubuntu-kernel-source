@@ -45,6 +45,7 @@
 #include <asm/unaligned.h>
 
 #include "nvme.h"
+#include "../../block/blk-mq.h"
 
 #define NVME_Q_DEPTH		1024
 #define NVME_AQ_DEPTH		256
@@ -582,6 +583,9 @@ static int nvme_queue_rq(struct blk_mq_hw_ctx *hctx,
 	struct nvme_command cmnd;
 	unsigned map_len;
 	int ret = BLK_MQ_RQ_QUEUE_OK;
+	
+	if (WARN_ON_ONCE(hctx != blk_mq_map_queue(req->q, req->mq_ctx->cpu)))
+		blk_dump_rq_flags(req, "nvme hctx mismatch");
 
 	/*
 	 * If formated with metadata, require the block layer provide a buffer
@@ -883,8 +887,8 @@ static enum blk_eh_timer_return nvme_timeout(struct request *req, bool reserved)
 			 req->tag, nvmeq->qid);
 		return BLK_EH_HANDLED;
 	}
+
 	/*
-	
 	 * Shutdown immediately if controller times out while starting. The
 	 * reset work will see the pci device disabled when it gets the forced
 	 * cancellation error. All outstanding requests are completed on
@@ -1598,7 +1602,7 @@ static int nvme_pci_enable(struct nvme_dev *dev)
 
 	if (pci_enable_device_mem(pdev))
 		return result;
-
+	
 	pci_set_master(pdev);
 
 	if (dma_set_mask_and_coherent(dev->dev, DMA_BIT_MASK(64)) &&
