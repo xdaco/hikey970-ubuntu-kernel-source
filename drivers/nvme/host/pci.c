@@ -604,6 +604,11 @@ static int nvme_queue_rq(struct blk_mq_hw_ctx *hctx,
 	ret = nvme_init_iod(req, map_len, dev);
 	if (ret)
 		return ret;
+	
+	if(blk_mq_tag_to_rq(*nvmeq->tags, req->tag) != req) {
+		ret = BLK_MQ_RQ_QUEUE_ERROR;
+		 goto out;
+       }
 
 	ret = nvme_setup_cmd(ns, req, &cmnd);
 	if (ret)
